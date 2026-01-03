@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jaipur Environment Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 32px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .location {
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+        }
+
+        .time-display {
+            text-align: right;
+        }
+
+        .time {
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .date {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .search-section {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .search-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        #locationInput {
+            flex: 1;
+            padding: 14px 20px;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            background: #111827;
+            color: white;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #locationInput:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+
+        .search-btn {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .quick-locations {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            background: #374151;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            background: #4b5563;
+        }
+
+        .alerts {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .alert {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+        }
+
+        .alert-warning {
+            background: rgba(234, 179, 8, 0.2);
+            border: 1px solid #eab308;
+        }
+
+        .current-location-card {
+            background: #1f2937;
+            border: 2px solid #60a5fa;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .current-location-card h3 {
+            font-size: 20px;
+            color: #60a5fa;
+            margin-bottom: 8px;
+        }
+
+        .current-location-card p {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        #map {
+            width: 100%;
+            height: 400px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            border: 1px solid #374151;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: #60a5fa;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(96, 165, 250, 0.2);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .stat-value {
+            font-size: 40px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-unit {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #374151;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .chart-card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .heatwave-section {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .heatwave-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .heatwave-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(234, 88, 12, 0.1) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .heatwave-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .heatwave-label {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .heatwave-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 4px;
+        }
+
+        .heatwave-status {
+            font-size: 14px;
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .heatwave-map-section {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        #heatwaveMap {
+            width: 100%;
+            height: 450px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border: 1px solid #374151;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-placeholder-content {
+            text-align: center;
+            color: #9ca3af;
+            z-index: 1;
+        }
+
+        .heatwave-legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .ai-insights-section {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .ai-insights-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .ai-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #60a5fa 0%, #a855f7 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .ai-insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .ai-insight-card {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .ai-insight-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-insight-content {
+            color: #d1d5db;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+        }
+
+        .spinner {
+            border: 3px solid #374151;
+            border-top: 3px solid #60a5fa;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .info-section {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+            border: 1px solid #3b82f6;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+
+        .aqi-scale {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .scale-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .scale-color {
+            width: 40px;
+            height: 30px;
+            border-radius: 6px;
+        }
+
+        .scale-info {
+            flex: 1;
+        }
+
+        .scale-range {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .scale-label {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 28px; }
+            .stat-value { font-size: 32px; }
+            .search-bar { flex-direction: column; }
+            .ai-insights-grid { grid-template-columns: 1fr; }
+            .heatwave-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div>
+                    <h1>Jaipur Environment Monitor</h1>
+                    <div class="location">
+                        <span>📍</span>
+                        <span>Air Pollution and Heatwave Monitoring Dashboard</span>
+                    </div>
+                </div>
+                <div class="time-display">
+                    <div class="time" id="currentTime"></div>
+                    <div class="date" id="currentDate"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="search-section">
+            <div class="search-title">
+                <span>🔍</span>
+                <span>Search Location in Jaipur</span>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="locationInput" placeholder="Enter location in Jaipur (e.g., Malviya Nagar, C-Scheme, Vaishali Nagar)">
+                <button class="search-btn" onclick="searchLocation()">Search</button>
+            </div>
+            <div style="margin-top: 12px; font-size: 13px; color: #9ca3af;">Quick Search:</div>
+            <div class="quick-locations">
+                <button class="quick-btn" onclick="quickSearch('Malviya Nagar')">Malviya Nagar</button>
+                <button class="quick-btn" onclick="quickSearch('C-Scheme')">C-Scheme</button>
+                <button class="quick-btn" onclick="quickSearch('Vaishali Nagar')">Vaishali Nagar</button>
+                <button class="quick-btn" onclick="quickSearch('Mansarovar')">Mansarovar</button>
+                <button class="quick-btn" onclick="quickSearch('Raja Park')">Raja Park</button>
+                <button class="quick-btn" onclick="quickSearch('Sanganer')">Sanganer</button>
+            </div>
+        </div>
+
+        <div class="alerts" id="alertsContainer"></div>
+
+        <div class="current-location-card" id="currentLocationCard">
+            <h3 id="currentLocationName">Jaipur City Center</h3>
+            <p>Select a location above to view specific area data</p>
+        </div>
+
+        <div id="loadingDiv" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <div>Loading environmental data...</div>
+        </div>
+
+        <div id="map">
+            <div style="text-align: center; color: #9ca3af;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
+                <div>Map Placeholder</div>
+                <div style="font-size: 12px; margin-top: 8px;">Integrate Google Maps API in production</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon-label">
+                        <span class="stat-icon">💨</span>
+                        <span class="stat-label">PM2.5 Level</span>
+                    </div>
+                    <span id="pm25Trend">📈</span>
+                </div>
+                <div class="stat-value" id="pm25Value">85.3</div>
+                <div class="stat-unit">μg/m³</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="pm25Progress" style="background: linear-gradient(90deg, #f97316, #ef4444); width: 42%;"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon-label">
+                        <span class="stat-icon">🌫️</span>
+                        <span class="stat-label">PM10 Level</span>
+                    </div>
+                    <span id="pm10Trend">📈</span>
+                </div>
+                <div class="stat-value" id="pm10Value">142.7</div>
+                <div class="stat-unit">μg/m³</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="pm10Progress" style="background: linear-gradient(90deg, #8b5cf6, #ec4899); width: 47%;"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon-label">
+                        <span class="stat-icon">📊</span>
+                        <span class="stat-label">Air Quality Index</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="aqiValue" style="color: #f97316;">156</div>
+                <div class="stat-unit" id="aqiLabel">Unhealthy</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon-label">
+                        <span class="stat-icon">🌡️</span>
+                        <span class="stat-label">Temperature</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="tempValue">38.5</div>
+                <div class="stat-unit">°C</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon-label">
+                        <span class="stat-icon">💧</span>
+                        <span class="stat-label">Humidity</span>
+                    </div>
+                </div>
+                <div class="stat-value" id="humidityValue">42</div>
+                <div class="stat-unit">%</div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">
+                <span>📈</span>
+                <span>AQI Trend - Last 7 Days</span>
+            </div>
+            <canvas id="aqiChart"></canvas>
+        </div>
+
+        <div class="heatwave-section">
+            <div class="chart-title">
+                <span>🌡️</span>
+                <span>Heatwave Overview</span>
+            </div>
+            <div class="heatwave-grid">
+                <div class="heatwave-card">
+                    <div class="heatwave-icon">🌡️</div>
+                    <div class="heatwave-label">Current Temp</div>
+                    <div class="heatwave-value" id="heatwaveTemp">38.5°C</div>
+                    <div class="heatwave-status" id="heatwaveStatus">Heatwave Alert</div>
+                </div>
+                <div class="heatwave-card">
+                    <div class="heatwave-icon">🔥</div>
+                    <div class="heatwave-label">Feels Like</div>
+                    <div class="heatwave-value" id="feelsLike">42.3°C</div>
+                    <div class="heatwave-status">Heat Index</div>
+                </div>
+                <div class="heatwave-card">
+                    <div class="heatwave-icon">☀️</div>
+                    <div class="heatwave-label">UV Index</div>
+                    <div class="heatwave-value" id="uvIndex">8</div>
+                    <div class="heatwave-status" id="uvStatus">Very High</div>
+                </div>
+                <div class="heatwave-card">
+                    <div class="heatwave-icon">⚠️</div>
+                    <div class="heatwave-label">Heat Risk</div>
+                    <div class="heatwave-value" id="heatRisk">4/5</div>
+                    <div class="heatwave-status" id="heatRiskStatus">High Risk</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="heatwave-map-section">
+            <div class="chart-title">
+                <span>🗺️</span>
+                <span>Heatwave Map</span>
+            </div>
+            <div id="heatwaveMap">
+                <div class="map-placeholder-content">
+                    <div style="font-size: 64px; margin-bottom: 16px;">🌡️</div>
+                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Heatwave Intensity Map</div>
+                    <div style="font-size: 14px; margin-bottom: 16px;">Temperature distribution across Jaipur regions</div>
+                    <div style="font-size: 12px; color: #60a5fa;">Integrate Google Maps Heatmap Layer in production</div>
+                </div>
+            </div>
+            <div class="heatwave-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Normal (< 30°C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fbbf24;"></div>
+                    <span>Warm (30-35°C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f97316;"></div>
+                    <span>Hot (35-40°C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Extreme (40-45°C)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #991b1b;"></div>
+                    <span>Severe (> 45°C)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-insights-section">
+            <div class="ai-insights-header">
+                <div class="ai-icon">🤖</div>
+                <div>
+                    <div class="chart-title" style="margin: 0;">AI Insights</div>
+                    <div style="font-size: 13px; color: #9ca3af;">Powered by Google Gemini</div>
+                </div>
+            </div>
+            <div class="ai-insights-grid">
+                <div class="ai-insight-card">
+                    <div class="ai-insight-title">
+                        <span>💊</span>
+                        <span>Health Advisory</span>
+                    </div>
+                    <div class="ai-insight-content" id="healthAdvisory">
+                        People with asthma should avoid outdoor activity during afternoon hours. Stay hydrated and remain in air-conditioned spaces when possible. Consider wearing N95 masks if going outside is necessary.
+                    </div>
+                </div>
+                <div class="ai-insight-card">
+                    <div class="ai-insight-title">
+                        <span>⚡</span>
+                        <span>Combined Risk Insights</span>
+                    </div>
+                    <div class="ai-insight-content" id="riskInsights">
+                        High temperature combined with poor air quality significantly increases heat stress risk. The combination can lead to respiratory distress and heat-related illnesses. Vulnerable populations should stay indoors.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="chart-title">
+                <span>📋</span>
+                <span>AQI Scale</span>
+            </div>
+            <div style="margin-bottom: 16px; padding: 12px; background: rgba(96, 165, 250, 0.1); border-radius: 8px; font-size: 14px; color: #9ca3af;">
+                <strong style="color: #60a5fa;">Data Source:</strong> This dashboard uses real-time AQI data from the World Air Quality Index (WAQI) project, which aggregates data from aqi.in and various government monitoring stations across India.
+            </div>
+            <div class="aqi-scale">
+                <div class="scale-item">
+                    <div class="scale-color" style="background: #00e400;"></div>
+                    <div class="scale-info">
+                        <div class="scale-range">0-50 Good</div>
+                        <div class="scale-label">Air quality is satisfactory</div>
+                    </div>
+                </div>
+                <div class="scale-item">
+                    <div class="scale-color" style="background: #ffff00;"></div>
+                    <div class="scale-info">
+                        <div class="scale-range">51-100 Moderate</div>
+                        <div class="scale-label">Acceptable for most</div>
+                    </div>
+                </div>
+                <div class="scale-item">
+                    <div class="scale-color" style="background: #ff7e00;"></div>
+                    <div class="scale-info">
+                        <div class="scale-range">101-150 Unhealthy</div>
+                        <div class="scale-label">Sensitive groups affected</div>
+                    </div>
+                </div>
+                <div class="scale-item">
+                    <div class="scale-color" style="background: #ff0000;"></div>
+                    <div class="scale-info">
+                        <div class="scale-range">151-200 Unhealthy</div>
+                        <div class="scale-label">Everyone affected</div>
+                    </div>
+                </div>
+                <div class="scale-item">
+                    <div class="scale-color" style="background: #8f3f97;"></div>
+                    <div class="scale-info">
+                        <div class="scale-range">201-300 Very Unhealthy</div>
+                        <div class="scale-label">Health alert</div>
+                    </div>
+                </div>
+                <div class="scale-item">
+                    <div class="scale-color" style="background: #7e0023;"></div>
+                    <div class="scale-info">
+                        <div class="scale-range">301+ Hazardous</div>
+                        <div class="scale-label">Emergency conditions</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Search functionality
+        function searchLocation() {
+            const location = document.getElementById('locationInput').value.trim();
+            if (location) {
+                document.getElementById('currentLocationName').textContent = location;
+                // Your backend API call will go here
+                console.log('Searching for:', location);
+            }
+        }
+
+        function quickSearch(location) {
+            document.getElementById('locationInput').value = location;
+            searchLocation();
+        }
+
+        // Enter key search
+        document.getElementById('locationInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchLocation();
+        });
+
+        // Initialize chart
+        const ctx = document.getElementById('aqiChart').getContext('2d');
+        const aqiChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'AQI Level',
+                    data: [145, 167, 132, 178, 156, 142, 156],
+                    borderColor: '#60a5fa',
+                    backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { labels: { color: '#fff' } }
+                },
+                scales: {
+                    y: { 
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#374151' }
+                    },
+                    x: { 
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#374151' }
+                    }
+                }
+            }
+        });
+
+        // Alert on page load
+        setTimeout(() => {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger';
+            alert.textContent = '⚠️ Air quality is unhealthy! Avoid outdoor activities.';
+            document.getElementById('alertsContainer').appendChild(alert);
+        }, 1000);
+
+        console.log('Jaipur Environment Monitor loaded successfully!');
+        console.log('Ready for backend API integration');
+    </script>
+</body>
+</html>
