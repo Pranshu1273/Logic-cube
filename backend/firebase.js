@@ -1,16 +1,10 @@
-// backend/firebase.js
+const { initializeApp } = require("firebase/app");
+const { getFirestore } = require("firebase/firestore");
 
-// Import Firebase core
-import { initializeApp } from "firebase/app";
-
-// Import Firestore
-import { getFirestore } from "firebase/firestore";
-
-// Your Firebase configuration
-// (copy this from Firebase Console → Project Settings)
+// 🔐 Firebase configuration (PASTE YOUR REAL VALUES)
 const firebaseConfig = {
   apiKey: "AIzaSyARGSI3NVkc_H0lApMZSEEs2qA7nhW-lIk",
-  authDomain: "industrial-pollution.firebaseapp.com ",
+  authDomain: "industrial-pollution.firebaseapp.com",
   projectId: "industrial-pollution",
   storageBucket: "industrial-pollution.firebasestorage.app",
   messagingSenderId: "250836603098",
@@ -24,4 +18,4 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // Export Firestore database
-export { db };
+module.exports = { db };

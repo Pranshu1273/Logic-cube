@@ -1,6 +1,5 @@
-// backend/firestore.js
-
 const { db } = require("./firebase");
+
 const {
   collection,
   addDoc,
@@ -13,11 +12,12 @@ const {
 } = require("firebase/firestore");
 
 /**
- * Store one snapshot of environment data
- * (One area, one timestamp)
+ * Add one environment snapshot
  */
 async function addEnvironmentSnapshot(data) {
   try {
+    console.log("🧪 Writing snapshot for:", data.area, "UV:", data.uvIndex);
+
     await addDoc(collection(db, "environmentData"), {
       city: data.city,
       area: data.area,
@@ -25,45 +25,29 @@ async function addEnvironmentSnapshot(data) {
 
       pm25: data.pm25,
       pm10: data.pm10,
+
       temperature: data.temperature,
       feelsLike: data.feelsLike,
+      humidity: data.humidity,
+
+      // ✅ SAFE: Firestore never receives undefined
+      uvIndex: typeof data.uvIndex === "number" ? data.uvIndex : 0,
 
       aqiStatus: data.aqiStatus,
       heatStatus: data.heatStatus,
 
-      aiHealthAdvisory: data.aiHealthAdvisory,
-      aiCombinedRisk: data.aiCombinedRisk,
+      healthAdvisory: data.healthAdvisory,
+      combinedRisk: data.combinedRisk,
 
       updatedAt: Timestamp.now()
     });
-  } catch (error) {
-    console.error("Error saving environment data:", error);
-  }
-}
 
-/**
- * Fetch latest data for Jaipur (for dashboard)
- */
-async function getLatestJaipurData() {
-  try {
-    const q = query(
-      collection(db, "environmentData"),
-      where("city", "==", "Jaipur"),
-      orderBy("updatedAt", "desc"),
-      limit(20)
-    );
-
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    console.log("✅ Firestore write success:", data.area);
   } catch (error) {
-    console.error("Error fetching Jaipur data:", error);
+    console.error("❌ Firestore write error:", error);
   }
 }
 
 module.exports = {
-  addEnvironmentSnapshot,
-  getLatestJaipurData
+  addEnvironmentSnapshot
 };

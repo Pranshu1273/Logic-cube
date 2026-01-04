@@ -15,6 +15,16 @@ function fluctuate(base, range) {
   return base + Math.floor(Math.random() * range - range / 2);
 }
 
+// ☀️ Simulated UV Index (ADD THIS EXACTLY HERE)
+function getUVIndex(temp) {
+  if (temp < 30) return 3;   // Low
+  if (temp < 35) return 6;   // Moderate
+  if (temp < 40) return 8;   // High
+  return 11;                // Very High
+}
+
+
+
 // 🏙️ Jaipur areas (FINAL LIST)
 const jaipurAreas = [
   { area: "Vaishali Nagar", areaType: ["Residential", "Commercial"], pm25: 85, pm10: 140 },
@@ -43,9 +53,13 @@ async function generateSnapshot() {
       const pm25 = fluctuate(a.pm25, 20);
       const pm10 = fluctuate(a.pm10, 30);
 
-      const temperature = weather.temperature;
-      const feelsLike = weather.feelsLike;
-      const humidity = weather.humidity;
+      const temperature = weather.temperature ?? 25;
+      const feelsLike = weather.feelsLike ?? temperature;
+      const humidity = weather.humidity ?? 50;
+      const uvIndex = getUVIndex(temperature);
+
+
+
 
       const aqiStatus = getAQIStatus(pm25);
       const heatStatus = getHeatStatus(temperature);
@@ -60,16 +74,18 @@ async function generateSnapshot() {
         temperature,
         feelsLike,
         humidity,
+        uvIndex,
+      
 
         aqiStatus,
         heatStatus,
 
-        aiHealthAdvisory: generateHealthAdvisory(
-          a.areaType,
-          aqiStatus,
-          heatStatus
+        healthAdvisory: generateHealthAdvisory(
+         a.areaType,
+         aqiStatus,
+         heatStatus
         ),
-        aiCombinedRisk: generateCombinedRisk(aqiStatus, heatStatus)
+        combinedRisk: generateCombinedRisk(aqiStatus, heatStatus)
       });
 
       console.log(`✅ Data stored for ${a.area}`);
@@ -79,15 +95,21 @@ async function generateSnapshot() {
   }
 }
 
-// 🚀 Proper async runner (CRITICAL – do not remove)
+ // 🚀 Continuous simulator (hourly updates)
 (async () => {
   try {
-    console.log("🚀 Simulator started...");
+    console.log("🚀 Simulator started (hourly mode)...");
+
+    // Run once immediately
     await generateSnapshot();
-    console.log("🎉 Simulator finished successfully");
-    process.exit(0);
+
+    // Run every 1 hour
+    setInterval(async () => {
+      console.log("⏰ Hourly environment update...");
+      await generateSnapshot();
+    }, 5 * 60 * 1000); // 5 minutes
+
   } catch (error) {
     console.error("❌ Simulator failed:", error);
-    process.exit(1);
   }
 })();

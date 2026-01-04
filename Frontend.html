@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jaipur Environment Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -556,7 +560,7 @@
             <div style="margin-top: 12px; font-size: 13px; color: #9ca3af;">Quick Search:</div>
             <div class="quick-locations">
                 <button class="quick-btn" onclick="quickSearch('Malviya Nagar')">Malviya Nagar</button>
-                <button class="quick-btn" onclick="quickSearch('C-Scheme')">C-Scheme</button>
+                <button class="quick-btn" onclick="quickSearch('Vishwakarma')">Vishwakarma</button>
                 <button class="quick-btn" onclick="quickSearch('Vaishali Nagar')">Vaishali Nagar</button>
                 <button class="quick-btn" onclick="quickSearch('Mansarovar')">Mansarovar</button>
                 <button class="quick-btn" onclick="quickSearch('Raja Park')">Raja Park</button>
@@ -593,7 +597,7 @@
                     </div>
                     <span id="pm25Trend">📈</span>
                 </div>
-                <div class="stat-value" id="pm25Value">85.3</div>
+                <div class="stat-value" id="pm25Value">...</div>
                 <div class="stat-unit">μg/m³</div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="pm25Progress" style="background: linear-gradient(90deg, #f97316, #ef4444); width: 42%;"></div>
@@ -608,7 +612,7 @@
                     </div>
                     <span id="pm10Trend">📈</span>
                 </div>
-                <div class="stat-value" id="pm10Value">142.7</div>
+                <div class="stat-value" id="pm10Value">...</div>
                 <div class="stat-unit">μg/m³</div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="pm10Progress" style="background: linear-gradient(90deg, #8b5cf6, #ec4899); width: 47%;"></div>
@@ -633,7 +637,7 @@
                         <span class="stat-label">Temperature</span>
                     </div>
                 </div>
-                <div class="stat-value" id="tempValue">38.5</div>
+                <div class="stat-value" id="tempValue">...</div>
                 <div class="stat-unit">°C</div>
             </div>
 
@@ -644,7 +648,7 @@
                         <span class="stat-label">Humidity</span>
                     </div>
                 </div>
-                <div class="stat-value" id="humidityValue">42</div>
+                <div class="stat-value" id="humidityValue">...</div>
                 <div class="stat-unit">%</div>
             </div>
         </div>
@@ -666,25 +670,25 @@
                 <div class="heatwave-card">
                     <div class="heatwave-icon">🌡️</div>
                     <div class="heatwave-label">Current Temp</div>
-                    <div class="heatwave-value" id="heatwaveTemp">38.5°C</div>
+                    <div class="heatwave-value" id="heatwaveTemp">...</div>
                     <div class="heatwave-status" id="heatwaveStatus">Heatwave Alert</div>
                 </div>
                 <div class="heatwave-card">
                     <div class="heatwave-icon">🔥</div>
                     <div class="heatwave-label">Feels Like</div>
-                    <div class="heatwave-value" id="feelsLike">42.3°C</div>
+                    <div class="heatwave-value" id="feelsLike">...</div>
                     <div class="heatwave-status">Heat Index</div>
                 </div>
                 <div class="heatwave-card">
                     <div class="heatwave-icon">☀️</div>
                     <div class="heatwave-label">UV Index</div>
-                    <div class="heatwave-value" id="uvIndex">8</div>
+                    <div class="heatwave-value" id="uvIndex">...</div>
                     <div class="heatwave-status" id="uvStatus">Very High</div>
                 </div>
                 <div class="heatwave-card">
                     <div class="heatwave-icon">⚠️</div>
                     <div class="heatwave-label">Heat Risk</div>
-                    <div class="heatwave-value" id="heatRisk">4/5</div>
+                    <div class="heatwave-value" id="heatRisk">...</div>
                     <div class="heatwave-status" id="heatRiskStatus">High Risk</div>
                 </div>
             </div>
@@ -824,13 +828,16 @@
 
         // Search functionality
         function searchLocation() {
-            const location = document.getElementById('locationInput').value.trim();
-            if (location) {
-                document.getElementById('currentLocationName').textContent = location;
-                // Your backend API call will go here
-                console.log('Searching for:', location);
-            }
+          const location = document.getElementById('locationInput').value.trim();
+          if (!location) return;
+
+          selectedArea = location;
+          document.getElementById('currentLocationName').textContent = location;
+
+          // Refresh dashboard immediately
+          updateDashboard(latestByArea);
         }
+
 
         function quickSearch(location) {
             document.getElementById('locationInput').value = location;
@@ -888,5 +895,132 @@
         console.log('Jaipur Environment Monitor loaded successfully!');
         console.log('Ready for backend API integration');
     </script>
+
+    <script>
+  // 🔹 Firebase configuration (same project as backend)
+  const firebaseConfig = {
+    apiKey: "AIzaSyARGSI3NVkc_H0lApMZSEEs2qA7nhW-lIk",
+    authDomain: "industrial-pollution.firebaseapp.com",
+    projectId: "industrial-pollution",
+    storageBucket: "industrial-pollution.firebasestorage.app",
+    messagingSenderId: "250836603098",
+    appId: "1:250836603098:web:5bf69bbc8988fe86f195e3"
+  };
+
+  // 🔹 Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  // 🔹 Initialize Firestore
+  const db = firebase.firestore();
+  const latestByArea = {};
+  let selectedArea = "Malviya Nagar";
+
+
+  db.collection("environmentData")
+    .orderBy("updatedAt", "desc")
+    .onSnapshot((snapshot) => {
+
+      Object.keys(latestByArea).forEach(k => delete latestByArea[k]);
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (!latestByArea[data.area]) {
+          latestByArea[data.area] = data;
+        }
+      });
+
+      updateDashboard(latestByArea);
+    });
+
+  function updateDashboard(data) {
+    console.log("🔁 updateDashboard called for:", selectedArea);
+
+    const areaData = data[selectedArea];
+    if (!areaData) return;
+
+    // 🔹 DEBUG (temporary – you can remove later)
+    console.log("🌡️ Temp from Firestore:", areaData.temperature);
+    console.log("💧 Humidity from Firestore:", areaData.humidity);
+
+
+  // PM & weather
+  document.getElementById("pm25Value").textContent =
+    areaData.pm25 ?? "--";
+
+  document.getElementById("pm10Value").textContent =
+    areaData.pm10 ?? "--";
+
+  document.getElementById("tempValue").textContent =
+    areaData.temperature ?? "--";
+    // 🌡️ Heatwave Overview – Current Temperature
+  document.getElementById("heatwaveTemp").textContent =
+    areaData.temperature !== undefined
+     ? areaData.temperature + "°C"
+     : "--";
+     // 🔥 Heatwave Overview – Feels Like
+  document.getElementById("feelsLike").textContent =
+    areaData.feelsLike !== undefined
+     ? areaData.feelsLike + "°C"
+     : "--";
+
+  if (typeof areaData.uvIndex === "number") {
+    document.getElementById("uvIndex").textContent = areaData.uvIndex;
+
+    let uvStatus = "Low";
+    if (areaData.uvIndex >= 3) uvStatus = "Moderate";
+    if (areaData.uvIndex >= 6) uvStatus = "High";
+    if (areaData.uvIndex >= 8) uvStatus = "Very High";
+    if (areaData.uvIndex >= 11) uvStatus = "Extreme";
+
+    document.getElementById("uvStatus").textContent = uvStatus;
+  } else {
+    document.getElementById("uvIndex").textContent = "--";
+    document.getElementById("uvStatus").textContent = "Unknown";
+  }
+
+  // ⚠️ Heat Risk
+    let heatRiskValue = "Low";
+    let heatRiskStatus = "Safe";
+
+    if (areaData.heatStatus === "Heatwave Alert") {
+      heatRiskValue = "High";
+      heatRiskStatus = "Alert";
+    } 
+    else if (areaData.heatStatus === "Severe Heatwave") {
+      heatRiskValue = "Extreme";
+      heatRiskStatus = "Danger";
+    }
+
+document.getElementById("heatRisk").textContent = heatRiskValue;
+document.getElementById("heatRiskStatus").textContent = heatRiskStatus;
+
+
+  document.getElementById("humidityValue").textContent =
+    typeof areaData.humidity === "number"
+     ? areaData.humidity
+     : "--";
+
+
+  // 🔹 AQI (THIS IS THE NEW PART)
+  let aqiValue = Math.round(areaData.pm25 * 1.8);
+  if (aqiValue > 500) aqiValue = 500;
+
+  document.getElementById("aqiValue").textContent = aqiValue;
+  document.getElementById("aqiLabel").textContent =
+    areaData.aqiStatus ?? "Unknown";
+
+  // AI insights
+  document.getElementById("healthAdvisory").textContent =
+    areaData.healthAdvisory ?? "No advisory";
+
+  document.getElementById("riskInsights").textContent =
+    areaData.combinedRisk ?? "No risk data";
+}
+
+
+
+</script>
+
+    
 </body>
 </html>
