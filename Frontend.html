@@ -829,14 +829,21 @@
         // Search functionality
         function searchLocation() {
           const location = document.getElementById('locationInput').value.trim();
+
           if (!location) return;
 
-          selectedArea = location;
-          document.getElementById('currentLocationName').textContent = location;
-
-          // Refresh dashboard immediately
-          updateDashboard(latestByArea);
+          // ❌ Location not in Firestore data
+          if (!latestByArea[location]) {
+            alert("❌ Data not available for this location. Please select a valid Jaipur area.");
+            return;
         }
+
+        // ✅ Valid location
+        selectedArea = location;
+        document.getElementById('currentLocationName').textContent = location;
+
+        updateDashboard(latestByArea);
+      }
 
 
         function quickSearch(location) {
