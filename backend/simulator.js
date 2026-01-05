@@ -1,7 +1,8 @@
 // backend/simulator.js
 require("dotenv").config();
-console.log("Gemini key loaded:", !!process.env.GEMINI_API_KEY);
+
 console.log("🔥 simulator.js file is being executed");
+const { generateAIInsight } = require("./geminiService");
 
 const { addEnvironmentSnapshot } = require("./firestore");
 const { getAQIStatus, getHeatStatus } = require("./heatwavelogic");
@@ -79,6 +80,20 @@ async function generateSnapshot() {
       const aqiStatus = getAQIStatus(pm25);
       const heatStatus = getHeatStatus(temperature);
 
+
+
+      const aiInsight = await generateAIInsight({
+        areaType: a.areaType,
+        pm25,
+        pm10,
+        temperature,
+        humidity,
+        aqiStatus,
+        heatStatus
+      });
+
+
+
       await addEnvironmentSnapshot({
         city: "Jaipur",
         area: a.area,
@@ -93,6 +108,7 @@ async function generateSnapshot() {
 
         aqiStatus,
         heatStatus,
+        aiInsight,
 
         healthAdvisory: generateHealthAdvisory(
           a.areaType,
