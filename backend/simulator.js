@@ -1,5 +1,6 @@
 // backend/simulator.js
-
+require("dotenv").config();
+console.log("Gemini key loaded:", !!process.env.GEMINI_API_KEY);
 console.log("🔥 simulator.js file is being executed");
 
 const { addEnvironmentSnapshot } = require("./firestore");
@@ -8,12 +9,26 @@ const {
   generateHealthAdvisory,
   generateCombinedRisk
 } = require("./AIinsight");
-const { getCurrentWeather } = require("./weatherService");
+const { getWeatherForArea } = require("./weatherService");
+
 
 // Utility function to slightly fluctuate pollution values
 function fluctuate(base, range) {
   return base + Math.floor(Math.random() * range - range / 2);
 }
+
+function varyTemperature(baseTemp, areaType) {
+  let temp = baseTemp;
+
+  temp += (Math.random() - 0.5) * 0.4; // ±0.2°C
+
+  if (areaType.includes("Industrial")) temp += 0.2;
+  if (areaType.includes("Commercial")) temp += 0.1;
+
+  return Number(temp.toFixed(1));
+}
+
+
 
 // ☀️ Simulated UV Index (ADD THIS EXACTLY HERE)
 function getUVIndex(temp) {
@@ -43,23 +58,23 @@ async function generateSnapshot() {
   console.log("🟡 Inside generateSnapshot()");
 
   try {
-    console.log("🌦️ Fetching real-time weather from OpenWeather...");
-    const weather = await getCurrentWeather();
-    console.log("✅ Weather received:", weather);
-
     for (const a of jaipurAreas) {
       console.log(`➡️ Processing area: ${a.area}`);
+
+      console.log(`🌦️ Fetching weather for ${a.area}`);
+      const weather = await getWeatherForArea(a.area);
 
       const pm25 = fluctuate(a.pm25, 20);
       const pm10 = fluctuate(a.pm10, 30);
 
-      const temperature = weather.temperature ?? 25;
+      const temperature = varyTemperature(
+        weather.temperature ?? 25,
+        a.areaType
+      );
+
       const feelsLike = weather.feelsLike ?? temperature;
       const humidity = weather.humidity ?? 50;
       const uvIndex = getUVIndex(temperature);
-
-
-
 
       const aqiStatus = getAQIStatus(pm25);
       const heatStatus = getHeatStatus(temperature);
@@ -75,15 +90,14 @@ async function generateSnapshot() {
         feelsLike,
         humidity,
         uvIndex,
-      
 
         aqiStatus,
         heatStatus,
 
         healthAdvisory: generateHealthAdvisory(
-         a.areaType,
-         aqiStatus,
-         heatStatus
+          a.areaType,
+          aqiStatus,
+          heatStatus
         ),
         combinedRisk: generateCombinedRisk(aqiStatus, heatStatus)
       });
@@ -107,7 +121,7 @@ async function generateSnapshot() {
     setInterval(async () => {
       console.log("⏰ Hourly environment update...");
       await generateSnapshot();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 30 * 60 * 1000); // 30 minutes
 
   } catch (error) {
     console.error("❌ Simulator failed:", error);
