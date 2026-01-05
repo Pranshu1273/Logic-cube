@@ -23,6 +23,9 @@ async function addEnvironmentSnapshot(data) {
       area: data.area,
       areaType: data.areaType,
 
+      lat: data.lat,
+      lng: data.lng,
+
       pm25: data.pm25,
       pm10: data.pm10,
 
