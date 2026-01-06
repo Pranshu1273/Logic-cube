@@ -9,6 +9,16 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+    <!-- Leaflet Map (NO billing) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    
+
+
     <style>
         * {
             margin: 0;
@@ -154,37 +164,17 @@
             background: #4b5563;
         }
 
-        .alerts {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-
-        .alert {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: 500;
-            animation: slideIn 0.3s ease-out;
-        }
+        
+        
 
         @keyframes slideIn {
             from { transform: translateX(-20px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
 
-        .alert-danger {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid #ef4444;
-        }
+        
 
-        .alert-warning {
-            background: rgba(234, 179, 8, 0.2);
-            border: 1px solid #eab308;
-        }
+        
 
         .current-location-card {
             background: #1f2937;
@@ -568,7 +558,7 @@
             </div>
         </div>
 
-        <div class="alerts" id="alertsContainer"></div>
+        
 
         <div class="current-location-card" id="currentLocationCard">
             <h3 id="currentLocationName">Jaipur City Center</h3>
@@ -580,13 +570,7 @@
             <div>Loading environmental data...</div>
         </div>
 
-        <div id="map">
-            <div style="text-align: center; color: #9ca3af;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
-                <div>Map Placeholder</div>
-                <div style="font-size: 12px; margin-top: 8px;">Integrate Google Maps API in production</div>
-            </div>
-        </div>
+        <div id="map"></div>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -694,49 +678,12 @@
             </div>
         </div>
 
-        <div class="heatwave-map-section">
-            <div class="chart-title">
-                <span>🗺️</span>
-                <span>Heatwave Map</span>
-            </div>
-            <div id="heatwaveMap">
-                <div class="map-placeholder-content">
-                    <div style="font-size: 64px; margin-bottom: 16px;">🌡️</div>
-                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Heatwave Intensity Map</div>
-                    <div style="font-size: 14px; margin-bottom: 16px;">Temperature distribution across Jaipur regions</div>
-                    <div style="font-size: 12px; color: #60a5fa;">Integrate Google Maps Heatmap Layer in production</div>
-                </div>
-            </div>
-            <div class="heatwave-legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #10b981;"></div>
-                    <span>Normal (< 30°C)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #fbbf24;"></div>
-                    <span>Warm (30-35°C)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #f97316;"></div>
-                    <span>Hot (35-40°C)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #ef4444;"></div>
-                    <span>Extreme (40-45°C)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #991b1b;"></div>
-                    <span>Severe (> 45°C)</span>
-                </div>
-            </div>
-        </div>
-
         <div class="ai-insights-section">
             <div class="ai-insights-header">
                 <div class="ai-icon">🤖</div>
                 <div>
                     <div class="chart-title" style="margin: 0;">AI Insights</div>
-                    <div style="font-size: 13px; color: #9ca3af;">Powered by Google Gemini</div>
+                    <div style="font-size: 13px; color: #9ca3af;">Powered by Local AI (Gemma via Ollama)</div>
                 </div>
             </div>
             <div class="ai-insights-grid">
@@ -826,24 +773,67 @@
         updateTime();
         setInterval(updateTime, 1000);
 
+        function normalize(text) {
+          return text.toLowerCase().trim();
+        }
+
+        // 🧠 Find closest matching area
+        function findClosestMatch(input, areas) {
+           const normalizedInput = normalize(input);
+
+           for (const area of areas) {
+            if (normalize(area).includes(normalizedInput) ||
+               normalizedInput.includes(normalize(area))) {
+              return area;
+            }
+        }
+
+        return null;
+    }
+
         // Search functionality
         function searchLocation() {
-          const location = document.getElementById('locationInput').value.trim();
+          const input = document.getElementById("locationInput").value;
+          if (!input) return;
 
-          if (!location) return;
+          const areaNames = Object.keys(latestByArea);
 
-          // ❌ Location not in Firestore data
-          if (!latestByArea[location]) {
-            alert("❌ Data not available for this location. Please select a valid Jaipur area.");
+          // ✅ Exact match (case-insensitive)
+          const exactMatch = areaNames.find(
+            area => normalize(area) === normalize(input)
+          );
+
+         if (exactMatch) {
+            selectedArea = exactMatch;
+            document.getElementById("currentLocationName").textContent = exactMatch;
+            updateDashboard(latestByArea);
+            updateAQIChart();
+            zoomToArea(exactMatch);
             return;
         }
 
-        // ✅ Valid location
-        selectedArea = location;
-        document.getElementById('currentLocationName').textContent = location;
+        // 🤔 Try suggestion
+        const suggestion = findClosestMatch(input, areaNames);
 
-        updateDashboard(latestByArea);
-      }
+        if (suggestion) {
+          const confirmSearch = confirm(
+            `Did you mean "${suggestion}"?`
+         );
+
+         if (confirmSearch) {
+            selectedArea = suggestion;
+            document.getElementById("currentLocationName").textContent = suggestion;
+            updateDashboard(latestByArea);
+            updateAQIChart();
+            zoomToArea(suggestion);
+        }
+        return;
+    }
+
+    // ❌ No match at all
+    alert("❌ Location not found. Please select a valid Jaipur area.");
+ }
+
 
 
         function quickSearch(location) {
@@ -861,10 +851,10 @@
         const aqiChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: [],
                 datasets: [{
                     label: 'AQI Level',
-                    data: [145, 167, 132, 178, 156, 142, 156],
+                    data: [],
                     borderColor: '#60a5fa',
                     backgroundColor: 'rgba(96, 165, 250, 0.1)',
                     fill: true,
@@ -891,13 +881,7 @@
             }
         });
 
-        // Alert on page load
-        setTimeout(() => {
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-danger';
-            alert.textContent = '⚠️ Air quality is unhealthy! Avoid outdoor activities.';
-            document.getElementById('alertsContainer').appendChild(alert);
-        }, 1000);
+        
 
         console.log('Jaipur Environment Monitor loaded successfully!');
         console.log('Ready for backend API integration');
@@ -920,7 +904,25 @@
   // 🔹 Initialize Firestore
   const db = firebase.firestore();
   const latestByArea = {};
+  const historyByArea = {};
   let selectedArea = "Malviya Nagar";
+
+  // 🗺️ Initialize Leaflet Map
+  const map = L.map("map").setView([26.9124, 75.7873], 12);
+
+
+  // OpenStreetMap tiles
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors",
+  }).addTo(map);
+
+
+
+  // Store markers and heatmap
+  const markers = {};
+  let heatLayerMain = null;   // (we won't use this)
+
+
 
 
   db.collection("environmentData")
@@ -928,16 +930,56 @@
     .onSnapshot((snapshot) => {
 
       Object.keys(latestByArea).forEach(k => delete latestByArea[k]);
+      Object.keys(historyByArea).forEach(k => delete historyByArea[k]);
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (!latestByArea[data.area]) {
-          latestByArea[data.area] = data;
-        }
-      });
+snapshot.forEach(doc => {
+  const data = doc.data();
 
-      updateDashboard(latestByArea);
+  // Store latest snapshot
+  if (!latestByArea[data.area]) {
+    latestByArea[data.area] = data;
+  }
+
+  // Store history (max 7)
+  if (!historyByArea[data.area]) {
+    historyByArea[data.area] = [];
+  }
+
+  if (historyByArea[data.area].length < 7) {
+    historyByArea[data.area].push(data);
+  }
+});
+
+updateDashboard(latestByArea);
+
+if (historyByArea[selectedArea]) {
+  updateAQIChart();
+}
+
+updateMap(latestByArea);
+
+
     });
+
+    function getAQIStyle(aqi) {
+  if (aqi <= 50) {
+    return { label: "Good", color: "#00e400", emoji: "🟢" };
+  }
+  if (aqi <= 100) {
+    return { label: "Moderate", color: "#ffff00", emoji: "🟡" };
+  }
+  if (aqi <= 200) {
+    return { label: "Poor", color: "#ff7e00", emoji: "🟠" };
+  }
+  if (aqi <= 300) {
+    return { label: "Very Poor", color: "#ff0000", emoji: "🔴" };
+  }
+  if (aqi <= 400) {
+    return { label: "Severe", color: "#8f3f97", emoji: "🟣" };
+  }
+  return { label: "Hazardous", color: "#7e0023", emoji: "🟤" };
+}
+
 
   function updateDashboard(data) {
     console.log("🔁 updateDashboard called for:", selectedArea);
@@ -985,6 +1027,8 @@
     document.getElementById("uvStatus").textContent = "Unknown";
   }
 
+  
+
   // ⚠️ Heat Risk
     let heatRiskValue = "Low";
     let heatRiskStatus = "Safe";
@@ -1001,6 +1045,9 @@
 document.getElementById("heatRisk").textContent = heatRiskValue;
 document.getElementById("heatRiskStatus").textContent = heatRiskStatus;
 
+  
+
+
 
   document.getElementById("humidityValue").textContent =
     typeof areaData.humidity === "number"
@@ -1009,19 +1056,101 @@ document.getElementById("heatRiskStatus").textContent = heatRiskStatus;
 
 
   // 🔹 AQI (THIS IS THE NEW PART)
+  // 🔹 AQI (Dynamic + Color synced)
   let aqiValue = Math.round(areaData.pm25 * 1.8);
   if (aqiValue > 500) aqiValue = 500;
 
-  document.getElementById("aqiValue").textContent = aqiValue;
+  const aqiStyle = getAQIStyle(aqiValue);
+
+  // AQI number
+  const aqiEl = document.getElementById("aqiValue");
+  aqiEl.textContent = aqiValue;
+  aqiEl.style.color = aqiStyle.color;
+
+  // AQI label
   document.getElementById("aqiLabel").textContent =
-    areaData.aqiStatus ?? "Unknown";
+    `${aqiStyle.emoji} ${aqiStyle.label}`;
 
-  // AI insights
-  document.getElementById("healthAdvisory").textContent =
-    areaData.healthAdvisory ?? "No advisory";
+    // 🤖 AI INSIGHTS (with fallback)
+   document.getElementById("healthAdvisory").textContent =
+     areaData.aiInsight?.healthAdvice ||
+     areaData.healthAdvisory ||
+     "No advisory available";
 
-  document.getElementById("riskInsights").textContent =
-    areaData.combinedRisk ?? "No risk data";
+   document.getElementById("riskInsights").textContent =
+     areaData.aiInsight?.combinedRisk ||
+     areaData.combinedRisk ||
+    "No risk analysis available";
+
+    updateAQIChart();
+}
+
+ function updateMap(data) {
+  Object.values(data).forEach(area => {
+    if (typeof area.lat !== "number" || typeof area.lng !== "number") return;
+
+    const status = (area.aqiStatus || "").toLowerCase();
+
+    let color = "#00e400"; // Good
+    if (status.includes("moderate")) color = "#ffff00";
+    else if (status.includes("poor") || status.includes("unhealthy")) color = "#ff7e00";
+    else if (status.includes("very")) color = "#ff0000";
+    else if (status.includes("severe") || status.includes("hazardous")) color = "#7e0023";
+
+    if (!markers[area.area]) {
+      markers[area.area] = L.circleMarker([area.lat, area.lng], {
+        radius: 10,
+        color,
+        fillColor: color,
+        fillOpacity: 0.75,
+        weight: 2
+      })
+      .addTo(map)
+      .bindPopup(`
+        <b>${area.area}</b><br>
+        AQI: ${area.aqiStatus}<br>
+        PM2.5: ${area.pm25}<br>
+        Temp: ${area.temperature}°C
+      `);
+    } else {
+      markers[area.area].setStyle({ color, fillColor: color });
+    }
+  });
+}
+
+function updateAQIChart() {
+  const history = historyByArea[selectedArea];
+  if (!history || history.length === 0) return;
+
+  // Oldest → newest
+  const sorted = history.slice().reverse();
+
+  const labels = sorted.map((_, i) => `T-${sorted.length - i}`);
+  const values = sorted.map(d => {
+    let aqi = Math.round(d.pm25 * 1.8);
+    return aqi > 500 ? 500 : aqi;
+  });
+
+  aqiChart.data.labels = labels;
+  aqiChart.data.datasets[0].data = values;
+  aqiChart.update();
+}
+
+
+function zoomToArea(areaName) {
+  const areaData = latestByArea[areaName];
+  if (!areaData) return;
+
+  if (typeof areaData.lat === "number" && typeof areaData.lng === "number") {
+    map.setView([areaData.lat, areaData.lng], 14, {
+      animate: true
+    });
+
+    // Open marker popup if exists
+    if (markers[areaName]) {
+      markers[areaName].openPopup();
+    }
+  }
 }
 
 

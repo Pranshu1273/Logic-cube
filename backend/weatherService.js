@@ -22,23 +22,21 @@ const areaCoordinates = {
  */
 async function getWeatherForArea(areaName) {
   const coords = areaCoordinates[areaName];
+  if (!coords) {
+    throw new Error(`No coordinates found for ${areaName}`);
+  }
 
-  const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${coords.lat}&lon=${coords.lon}&appid=${API_KEY}&units=metric`;
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lon}&appid=${API_KEY}&units=metric`;
+
   const response = await axios.get(url);
-
-  // Take next 24 hours (8 entries × 3h)
-  const next24h = response.data.list.slice(0, 8);
-
-  const minTemp = Math.min(
-    ...next24h.map(item => item.main.temp_min)
-  );
+  const data = response.data;
 
   return {
-    temperature: minTemp,
-    feelsLike: minTemp,
-    humidity: next24h[0].main.humidity
-  };
-}
+  temperature: data.main.temp_max,   
+  feelsLike: data.main.feels_like,
+  humidity: data.main.humidity
+};
 
+}
 
 module.exports = { getWeatherForArea };

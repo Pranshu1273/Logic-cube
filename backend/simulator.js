@@ -34,17 +34,6 @@ function fluctuate(base, range) {
   return base + Math.floor(Math.random() * range - range / 2);
 }
 
-// Temperature variation based on area type
-function varyTemperature(baseTemp, areaType) {
-  let temp = baseTemp;
-  temp += (Math.random() - 0.5) * 0.4; // ±0.2°C
-
-  if (areaType.includes("Industrial")) temp += 0.2;
-  if (areaType.includes("Commercial")) temp += 0.1;
-
-  return Number(temp.toFixed(1));
-}
-
 // ☀️ UV Index simulation
 function getUVIndex(temp) {
   if (temp < 30) return 3;   // Low
@@ -89,10 +78,8 @@ async function generateSnapshot() {
       const pm10 = fluctuate(a.pm10, 30);
 
       // 🌡️ Temperature
-      const temperature = varyTemperature(
-        weather.temperature ?? 25,
-        a.areaType
-      );
+      const temperature = weather.temperature;
+
 
       const feelsLike = weather.feelsLike ?? temperature;
       const humidity = weather.humidity ?? 50;
